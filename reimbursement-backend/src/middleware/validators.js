@@ -35,6 +35,11 @@ const signupRules = [
     .trim()
     .notEmpty()
     .withMessage('Company name is required'),
+
+  body('defaultCurrency')
+    .optional()
+    .isLength({ min: 3, max: 3 })
+    .withMessage('Currency must be a 3-letter code'),
 ];
 
 const loginRules = [
@@ -79,6 +84,12 @@ const assignManagerRules = [
     .withMessage('Manager ID must be a valid UUID'),
 ];
 
+const updateUserRoleRules = [
+  body('role')
+    .isIn(['MANAGER', 'EMPLOYEE'])
+    .withMessage('Role must be MANAGER or EMPLOYEE'),
+];
+
 // ─── Expense Validators ──────────────────────────────────
 
 const createExpenseRules = [
@@ -119,6 +130,7 @@ module.exports = {
   loginRules,
   createUserRules,
   assignManagerRules,
+  updateUserRoleRules,
   createExpenseRules,
   approvalActionRules,
 };

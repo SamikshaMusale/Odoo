@@ -31,4 +31,20 @@ const listUsers = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, users);
 });
 
-module.exports = { createUser, assignManager, listUsers };
+const updateUserRole = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const { role } = req.body;
+  const user = await userService.updateUserRole({
+    userId,
+    newRole: role,
+    companyId: req.user.companyId,
+  });
+  return ApiResponse.success(res, user, 'User role updated successfully');
+});
+
+const getCurrentUser = asyncHandler(async (req, res) => {
+  const user = await userService.getCurrentUser(req.user.id);
+  return ApiResponse.success(res, user);
+});
+
+module.exports = { createUser, assignManager, listUsers, updateUserRole, getCurrentUser };
