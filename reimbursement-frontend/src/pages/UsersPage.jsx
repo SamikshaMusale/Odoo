@@ -9,7 +9,7 @@ export default function UsersPage({ addToast }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'EMPLOYEE' });
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'EMPLOYEE', managerId: '' });
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -38,17 +38,23 @@ export default function UsersPage({ addToast }) {
       addToast({ type: 'error', message: 'Please fill in all fields' });
       return;
     }
+    if (formData.role === 'EMPLOYEE' && !formData.managerId) {
+      addToast({ type: 'error', message: 'Please assign a manager to employee' });
+      return;
+    }
 
     setSubmitting(true);
     try {
-      const res = await api.post('/users', formData);
+      const payload = { name: formData.name, email: formData.email, password: formData.password, role: formData.role };
+      if (formData.managerId) payload.managerId = formData.managerId;
+      const res = await api.post('/users', payload);
       const newUser = res.data.data;
       setUsers(p => [newUser, ...p]);
-      setFormData({ name: '', email: '', password: '', role: 'EMPLOYEE' });
+      setFormData({ name: '', email: '', password: '', role: 'EMPLOYEE', managerId: '' });
       setShowModal(false);
       addToast({ type: 'success', message: `${formData.role} created successfully` });
     } catch (err) {
-      addToast({ type: 'error', message: err.response?.data?.message ?? 'Failed to create user' });
+      addToast({ type: 'error', message: err.message ?? 'Failed to create user' });
     } finally {
       setSubmitting(false);
     }
@@ -111,12 +117,30 @@ export default function UsersPage({ addToast }) {
             <select
               className="form-select"
               value={formData.role}
-              onChange={e => setFormData({ ...formData, role: e.target.value })}
+              onChange={e => setFormData({ ...formData, role: e.target.value, managerId: '' })}
             >
               <option value="EMPLOYEE">Employee</option>
               <option value="MANAGER">Manager</option>
             </select>
           </div>
+
+          {formData.role === 'EMPLOYEE' && (
+            <div className="form-group">
+              <label className="form-label">Manager *</label>
+              <select
+                className="form-select"
+                value={formData.managerId}
+                onChange={e => setFormData({ ...formData, managerId: e.target.value })}
+              >
+                <option value="">Select a manager</option>
+                {users
+                  .filter(u => u.role === 'MANAGER')
+                  .map(u => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+              </select>
+            </div>
+          )}
 
           <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
             <button type="submit" className="btn btn-primary" disabled={submitting} style={{ flex: 1 }}>

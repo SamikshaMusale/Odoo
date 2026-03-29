@@ -12,8 +12,8 @@ const { createExpenseRules, validate } = require('../middleware/validators');
 // All expense routes require authentication
 router.use(authenticate);
 
-// Employee: submit expense
-router.post('/', authorize('EMPLOYEE'), createExpenseRules, validate, createExpense);
+// Employee/Manager/Admin: submit expense
+router.post('/', authorize('EMPLOYEE', 'MANAGER', 'ADMIN'), createExpenseRules, validate, createExpense);
 
 // Employee: view own expenses
 router.get('/my', getMyExpenses);

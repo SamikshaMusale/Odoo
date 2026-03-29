@@ -8,29 +8,30 @@ export default function SubmitExpensePage({ addToast }) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
-    title: '', amount: '', category: 'TRAVEL',
-    description: '', receiptUrl: '', expenseDate: '',
+    amount: '', category: 'TRAVEL',
+    description: '', date: '',
   });
 
   const handleChange = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.title || !form.amount || !form.category) {
+    if (!form.amount || !form.category || !form.date) {
       addToast({ type: 'error', message: 'Please fill all required fields' });
       return;
     }
     setLoading(true);
     try {
       await api.post('/expenses', {
-        ...form,
         amount: parseFloat(form.amount),
-        expenseDate: form.expenseDate || new Date().toISOString(),
+        category: form.category,
+        description: form.description,
+        date: new Date(form.date).toISOString().split('T')[0], // Convert to YYYY-MM-DD
       });
       addToast({ type: 'success', message: 'Expense submitted successfully!' });
       navigate('/expenses');
     } catch (err) {
-      addToast({ type: 'error', message: err.response?.data?.message ?? 'Failed to submit expense' });
+      addToast({ type: 'error', message: err.message ?? 'Failed to submit expense' });
     } finally {
       setLoading(false);
     }
@@ -45,14 +46,9 @@ export default function SubmitExpensePage({ addToast }) {
 
       <div className="card" style={{ maxWidth: 640 }}>
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label className="form-label">Title *</label>
-            <input className="form-input" name="title" placeholder="e.g. Flight to Chennai" value={form.title} onChange={handleChange} required />
-          </div>
-
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div className="form-group">
-              <label className="form-label">Amount (₹) *</label>
+              <label className="form-label">Amount *</label>
               <input className="form-input" name="amount" type="number" min="1" step="0.01" placeholder="0.00" value={form.amount} onChange={handleChange} required />
             </div>
             <div className="form-group">
@@ -64,18 +60,13 @@ export default function SubmitExpensePage({ addToast }) {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Expense Date</label>
-            <input className="form-input" name="expenseDate" type="date" value={form.expenseDate} onChange={handleChange} />
+            <label className="form-label">Expense Date *</label>
+            <input className="form-input" name="date" type="date" value={form.date} onChange={handleChange} required />
           </div>
 
           <div className="form-group">
             <label className="form-label">Description</label>
             <textarea className="form-textarea" name="description" placeholder="Provide additional details…" value={form.description} onChange={handleChange} />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Receipt URL</label>
-            <input className="form-input" name="receiptUrl" type="url" placeholder="https://drive.google.com/…" value={form.receiptUrl} onChange={handleChange} />
           </div>
 
           <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
