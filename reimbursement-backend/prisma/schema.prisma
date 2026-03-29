@@ -1,0 +1,145 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  MANAGER
+  EMPLOYEE
+}
+
+enum ExpenseStatus {
+  PENDING
+  IN_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum ApprovalAction {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum RuleType {
+  PERCENTAGE
+  SPECIFIC_APPROVER
+  HYBRID
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model Company {
+  id              String   @id @default(uuid())
+  name            String
+  defaultCurrency String   @default("INR")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  users  User[]
+  rules  Rule[]
+
+  @@map("companies")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(EMPLOYEE)
+  companyId String
+  managerId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company       Company        @relation(fields: [companyId], references: [id])
+  manager       User?          @relation("ManagerSubordinates", fields: [managerId], references: [id])
+  subordinates  User[]         @relation("ManagerSubordinates")
+  expenses      Expense[]
+  approvalSteps ApprovalStep[]
+  approvalLogs  ApprovalLog[]
+
+  @@index([companyId])
+  @@index([managerId])
+  @@map("users")
+}
+
+model Expense {
+  id          String        @id @default(uuid())
+  amount      Float
+  currency    String        @default("INR")
+  category    String
+  description String?       @db.Text
+  receiptUrl  String?
+  date        DateTime
+  status      ExpenseStatus @default(PENDING)
+  userId      String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id])
+  approvalSteps ApprovalStep[]
+  approvalLogs  ApprovalLog[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("expenses")
+}
+
+model ApprovalStep {
+  id         String         @id @default(uuid())
+  expenseId  String
+  approverId String
+  stepOrder  Int
+  status     ApprovalAction @default(PENDING)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  expense  Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  approver User    @relation(fields: [approverId], references: [id])
+
+  @@unique([expenseId, stepOrder])
+  @@index([approverId])
+  @@map("approval_steps")
+}
+
+model ApprovalLog {
+  id         String   @id @default(uuid())
+  expenseId  String
+  approverId String
+  action     ApprovalAction
+  comment    String?  @db.Text
+  timestamp  DateTime @default(now())
+
+  expense  Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  approver User    @relation(fields: [approverId], references: [id])
+
+  @@index([expenseId])
+  @@map("approval_logs")
+}
+
+model Rule {
+  id        String   @id @default(uuid())
+  companyId String
+  type      RuleType
+  config    Json
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([companyId])
+  @@map("rules")
+}

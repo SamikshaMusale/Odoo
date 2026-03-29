@@ -1,0 +1,15 @@
+{
+  "name": "reimbursement-system",
+  "version": "1.0.0",
+  "description": "Reimbursement Management System — monorepo root",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently --names \"BACKEND,FRONTEND\" --prefix-colors \"cyan,magenta\" \"npm run dev --prefix reimbursement-backend\" \"npm run dev --prefix reimbursement-frontend\"",
+    "install:all": "npm install --prefix reimbursement-backend && npm install --prefix reimbursement-frontend",
+    "backend": "npm run dev --prefix reimbursement-backend",
+    "frontend": "npm run dev --prefix reimbursement-frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
