@@ -86,6 +86,52 @@ class UserService {
   }
 
   /**
+   * Update user role
+   */
+  async updateUserRole({ userId, newRole, companyId }) {
+    // Verify user belongs to same company
+    const user = await prisma.user.findFirst({
+      where: { id: userId, companyId },
+    });
+    if (!user) {
+      throw Object.assign(new Error('User not found in your company'), { statusCode: 404 });
+    }
+
+    // Prevent changing ADMIN role
+    if (user.role === 'ADMIN') {
+      throw Object.assign(new Error('Cannot change the role of an admin user'), { statusCode: 400 });
+    }
+
+    // Validate new role
+    if (!['MANAGER', 'EMPLOYEE'].includes(newRole)) {
+      throw Object.assign(new Error('Role must be MANAGER or EMPLOYEE'), { statusCode: 400 });
+    }
+
+    // If changing from MANAGER to EMPLOYEE, handle subordinates
+    if (user.role === 'MANAGER' && newRole === 'EMPLOYEE') {
+      // Clear managerId from subordinates (they no longer have a manager)
+      await prisma.user.updateMany({
+        where: { managerId: userId },
+        data: { managerId: null },
+      });
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { role: newRole },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        managerId: true,
+      },
+    });
+
+    return updated;
+  }
+
+  /**
    * List all users in the company
    */
   async listUsers(companyId) {
@@ -102,6 +148,36 @@ class UserService {
       },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  /**
+   * Get current authenticated user details
+   */
+  async getCurrentUser(userId) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        companyId: true,
+        managerId: true,
+        company: {
+          select: {
+            id: true,
+            name: true,
+            defaultCurrency: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw Object.assign(new Error('User not found'), { statusCode: 404 });
+    }
+
+    return user;
   }
 }
 
