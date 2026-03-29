@@ -10,10 +10,10 @@ export default function ApprovalsPage({ addToast }) {
   const [actioning, setActioning] = useState({});
 
   const load = () => {
-    api.get('/expenses?status=PENDING')
+    api.get('/approvals/pending')
       .then(res => {
-        const data = res.data.data ?? res.data;
-        setPending(Array.isArray(data) ? data : data?.expenses ?? []);
+        const data = res.data.approvals ?? res.data ?? [];
+        setPending(Array.isArray(data) ? data : []);
       })
       .catch(() => setPending([]))
       .finally(() => setLoading(false));
@@ -21,16 +21,16 @@ export default function ApprovalsPage({ addToast }) {
 
   useEffect(load, []);
 
-  const handleAction = async (expId, action) => {
-    setActioning(p => ({ ...p, [expId]: action }));
+  const handleAction = async (stepId, action) => {
+    setActioning(p => ({ ...p, [stepId]: action }));
     try {
-      await api.post(`/approvals/${expId}/${action}`, {});
+      await api.post(`/approvals/${stepId}/${action}`, {});
       addToast({ type: 'success', message: `Expense ${action}d` });
-      setPending(p => p.filter(e => e.id !== expId));
+      await load();
     } catch (err) {
-      addToast({ type: 'error', message: err.response?.data?.message ?? 'Action failed' });
+      addToast({ type: 'error', message: err.message ?? 'Action failed' });
     } finally {
-      setActioning(p => { const n = {...p}; delete n[expId]; return n; });
+      setActioning(p => { const n = {...p}; delete n[stepId]; return n; });
     }
   };
 
@@ -50,40 +50,43 @@ export default function ApprovalsPage({ addToast }) {
         </div>
       ) : (
         <div className="expense-grid">
-          {pending.map(exp => (
-            <div className="card" key={exp.id} style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+          {pending.map(step => {
+            const exp = step.expense;
+            return (
+            <div className="card" key={step.id} style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                   <Link to={`/expenses/${exp.id}`} style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)' }}>
-                    {exp.title}
+                    {exp.description || `Expense #${exp.id.slice(0, 8)}`}
                   </Link>
                   <StatusBadge status={exp.status} />
                 </div>
                 <div style={{ display: 'flex', gap: 20, fontSize: 13, color: 'var(--text-muted)', flexWrap: 'wrap' }}>
-                  <span>👤 {exp.submittedBy?.name ?? exp.user?.name ?? '—'}</span>
+                  <span>👤 {exp.user?.name ?? '—'}</span>
                   <span>🏷️ {exp.category?.replace('_',' ')}</span>
-                  <span>📅 {exp.expenseDate ? new Date(exp.expenseDate).toLocaleDateString() : '—'}</span>
+                  <span>📅 {exp.date ? new Date(exp.date).toLocaleDateString() : '—'}</span>
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
                 <span style={{ fontWeight: 800, fontSize: 18 }}>₹{Number(exp.amount).toFixed(2)}</span>
                 <button
                   className="btn btn-success btn-sm"
-                  disabled={!!actioning[exp.id]}
-                  onClick={() => handleAction(exp.id, 'approve')}
+                  disabled={!!actioning[step.id]}
+                  onClick={() => handleAction(step.id, 'approve')}
                 >
-                  {actioning[exp.id] === 'approve' ? '⏳' : '✅'} Approve
+                  {actioning[step.id] === 'approve' ? '⏳' : '✅'} Approve
                 </button>
                 <button
                   className="btn btn-danger btn-sm"
-                  disabled={!!actioning[exp.id]}
-                  onClick={() => handleAction(exp.id, 'reject')}
+                  disabled={!!actioning[step.id]}
+                  onClick={() => handleAction(step.id, 'reject')}
                 >
-                  {actioning[exp.id] === 'reject' ? '⏳' : '❌'} Reject
+                  {actioning[step.id] === 'reject' ? '⏳' : '❌'} Reject
                 </button>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
