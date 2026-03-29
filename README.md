@@ -89,4 +89,4 @@ GET http://localhost:3000/health
 ## License
 
 MIT License
-Copyright (c) 2026
+Copyright © 2026
